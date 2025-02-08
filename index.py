@@ -1,8 +1,17 @@
 from flask import Flask, request
+from flask_cors import CORS
 import os
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+# Enable CORS for all routes
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",  # Allow all origins
+        "methods": ["POST", "OPTIONS"],  # Allow POST and preflight requests
+        "allow_headers": ["Content-Type", "Authorization"]  # Allow these headers
+    }
+})
 
 # Configure upload folder and allowed extensions
 UPLOAD_FOLDER = 'uploads'
@@ -19,8 +28,12 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/video', methods=['POST'])
+@app.route('/video', methods=['POST', 'OPTIONS'])
 def upload_video():
+    # Handle preflight requests
+    if request.method == 'OPTIONS':
+        return {}, 200
+        
     # Check if a file was included in the request
     if 'video' not in request.files:
         return {'error': 'No video file in request'}, 400
@@ -50,4 +63,4 @@ def upload_video():
         return {'error': str(e)}, 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port= 1336)
+    app.run(debug=True, port=1336)
