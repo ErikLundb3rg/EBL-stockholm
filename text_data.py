@@ -5,7 +5,7 @@ from collections import defaultdict
 from dotenv import load_dotenv
 import os
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -80,9 +80,8 @@ def get_wpm_array(data, window_size=10):
     wpms = [int(count * 6) for count in word_counts]
     return [segment(when[i][0], when[i][1], wpms[i]) for i in range(num_windows)]
 
-def text_data():
-    data = read_json_file("./transcribed.json")
-    sentences = data['transcription']['sentences']
+def text_data(transcription):
+    sentences = transcription['transcription']['sentences']
     sentenceSegments = []
     pauseLengths = []
 
@@ -99,7 +98,7 @@ def text_data():
         previousSentence = sentence
         letterCount += len(filter_letters(sentence['sentence']))
     
-    average_wpm = sum([x['value'] for x in get_wpm_array(data)]) / len(get_wpm_array(data))
+    average_wpm = sum([x['value'] for x in get_wpm_array(transcription)]) / len(get_wpm_array(transcription))
     
 
 
@@ -108,7 +107,7 @@ def text_data():
         "shortest": min(sentenceSegments, key=lambda x: len(x['value'])),
         "longest": max(sentenceSegments, key=lambda x: len(x['value'])),
         "pauseLengths": pauseLengths,
-        "wordsPerMinute": get_wpm_array(data),
+        "wordsPerMinute": get_wpm_array(transcription),
         "summary": llm_summary(),
         "averageWPM": average_wpm,
         "averagePause": sum([x['value'] for x in pauseLengths]) / len(pauseLengths)

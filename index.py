@@ -71,7 +71,7 @@ def upload_video():
     return {
             'message': 'Video uploaded successfully',
             'filename': filename,
-            'textData': td.text_data()
+            'textData': td.text_data(transcribed_text)
         }, 200
 
 if __name__ == '__main__':
