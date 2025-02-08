@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from gladia import transcribe
 import text_data as td
 from pitch import add_pich_to_transcript
+from utils import replace_nan_with_none
 
 app = Flask(__name__)
 # Enable CORS for all routes
@@ -68,11 +69,12 @@ def upload_video():
     
     transcribed_text = add_pich_to_transcript(filepath, transcript=transcribed_text)
 
-    return {
+    return replace_nan_with_none({
             'message': 'Video uploaded successfully',
             'filename': filename,
-            'textData': td.text_data(transcribed_text)
-        }, 200
+            'textData': td.text_data(transcribed_text),
+            'pitch': transcribed_text.get("pitch")
+        }), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=1336)

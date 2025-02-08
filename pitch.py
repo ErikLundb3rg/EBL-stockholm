@@ -6,6 +6,7 @@ print(sys.path)  # This will show us where Python is looking for modules
 from moviepy import *
 from moviepy.editor import VideoFileClip
 from numpy.polynomial import Polynomial
+import os
 
 def extract_audio(mp4_path, wav_path):
     """
@@ -72,13 +73,18 @@ def pich(video_file_path):
     extract_audio(video_file_path, audio_file)
     y, sr = librosa.load(audio_file, sr=None)  # y is the audio signal, sr is the sampling rate
 
-    # 1. Extract pitch (fundamental frequency) using pyin (a better pitch estimator)
-    f0, _voiced_flag, _voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C1'), fmax=librosa.note_to_hz('C8'), sr=sr)
-
-    # 2. Extract intensity (RMS) - Root Mean Square Energy
+    # 1. Extract intensity (RMS) - Root Mean Square Energy
     rms = librosa.feature.rms(y=y)
 
-    return librosa.times_like(f0, sr=sr), f0, rms[0]
+    # 2. Extract pitch (fundamental frequency) using pyin (a better pitch estimator)
+    print("pitch")
+    if os.getenv("TIME_SAVE", 0) == 0:
+        f0, _voiced_flag, _voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C1'), fmax=librosa.note_to_hz('C8'), sr=sr)
+    else:
+        f0 = np.full_like(rms[0], 100)
+    print("pitch")
+
+    return librosa.times_like(rms, sr=sr), f0, rms[0]
 
 def add_pich_to_transcript(video_file_path, transcript, interpolation_degree=3):
     """
