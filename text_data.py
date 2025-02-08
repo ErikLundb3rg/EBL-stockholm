@@ -16,9 +16,9 @@ def read_json_file(filepath):
     file.close()
     return data
 
-def llm_summary():
+def llm_summary(transcription):
     print("Asking Gemini...")
-    my_json = read_json_file("./transcribed.json")
+    my_json = transcription
     full_speech_text = my_json['transcription']['full_transcript']
     separator_key = "<SEP>"
     
@@ -108,7 +108,7 @@ def text_data(transcription):
         "longest": max(sentenceSegments, key=lambda x: len(x['value'])),
         "pauseLengths": pauseLengths,
         "wordsPerMinute": get_wpm_array(transcription),
-        "summary": llm_summary(),
+        "summary": llm_summary(transcription),
         "averageWPM": average_wpm,
         "averagePause": sum([x['value'] for x in pauseLengths]) / len(pauseLengths)
     }
