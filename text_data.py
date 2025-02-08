@@ -1,10 +1,13 @@
 # I don't care 
-key = "AIzaSyD2hGhPlGUU_1mLnN6Co6WuDPAbBlIOB8A"
 from google import genai
 import json
 from collections import defaultdict
+from dotenv import load_dotenv
+import os
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-client = genai.Client(api_key=key)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 def read_json_file(filepath):
@@ -23,7 +26,7 @@ def llm_summary():
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=f"""
-            In max 50 words, summarize what was great in the speech. Be clear and concise. Give a concrete example from the speech.
+            In max 50 words, summarize what was great in the speech. Be clear and concise.
             Then using a separator of {separator_key} do the same thing but for what could be improved.
             Refer too the speaker as 'you', also don't hallucinate. 
             {full_speech_text}
@@ -95,6 +98,10 @@ def text_data():
         # get the pause lengths 
         previousSentence = sentence
         letterCount += len(filter_letters(sentence['sentence']))
+    
+    average_wpm = sum([x['value'] for x in get_wpm_array(data)]) / len(get_wpm_array(data))
+    
+
 
     dataObject = {
         "sentences": sentenceSegments,
@@ -103,7 +110,7 @@ def text_data():
         "pauseLengths": pauseLengths,
         "wordsPerMinute": get_wpm_array(data),
         "summary": llm_summary(),
-        "averageWPM": sum([x['value'] for x in get_wpm_array(data)]) / len(get_wpm_array(data)),
+        "averageWPM": average_wpm,
         "averagePause": sum([x['value'] for x in pauseLengths]) / len(pauseLengths)
     }
     return dataObject
