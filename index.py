@@ -4,6 +4,7 @@ import os
 from werkzeug.utils import secure_filename
 from gladia import transcribe
 import text_data as td
+from pitch import add_pich_to_transcript
 
 app = Flask(__name__)
 # Enable CORS for all routes
@@ -64,6 +65,8 @@ def upload_video():
     transcribed_text = transcribe(filepath)
     if "error" in transcribed_text:
         return transcribed_text, transcribed_text["error_code"]
+    
+    transcribed_text = add_pich_to_transcript(filepath, transcript=transcribed_text)
 
     return {
             'message': 'Video uploaded successfully',
