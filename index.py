@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 from werkzeug.utils import secure_filename
 from gladia import transcribe
+import text_data as td
 
 app = Flask(__name__)
 # Enable CORS for all routes
@@ -67,7 +68,7 @@ def upload_video():
     return {
             'message': 'Video uploaded successfully',
             'filename': filename,
-            'transcribed_text': transcribed_text
+            'textData': td.text_data()
         }, 200
 
 if __name__ == '__main__':
