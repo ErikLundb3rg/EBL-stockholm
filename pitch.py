@@ -7,6 +7,7 @@ from moviepy import *
 from moviepy.editor import VideoFileClip
 from numpy.polynomial import Polynomial
 import os
+from text_data import client
 
 def extract_audio(mp4_path, wav_path):
     """
@@ -86,6 +87,44 @@ def pich(video_file_path):
 
     return librosa.times_like(rms, sr=sr), f0, rms[0]
 
+
+def analyze_pitch_ranges(pitch_values):
+    """
+    Analyze pitch values and categorize them into 5 intensity levels.
+    
+    Parameters:
+    pitch_values (array-like): Array of pitch values in Hertz
+    
+    Returns:
+    tuple: (range_counts, range_labels)
+        - range_counts: Count of values in each intensity level
+        - range_labels: String labels for each level
+    """
+    pitch_values = np.array(pitch_values)
+    
+    # Remove any negative values or zeros
+    pitch_values = pitch_values[pitch_values > 0]
+    
+    # Define 5 intensity ranges with boundaries
+    boundaries = [85, 130, 200, 300, 400, 500]  # Hz
+    labels = [
+        "Very Low (85-130Hz)",
+        "Low (130-200Hz)",
+        "Medium (200-300Hz)",
+        "High (300-400Hz)",
+        "Very High (400-500Hz)"
+    ]
+    
+    # Initialize counts array
+    range_counts = np.zeros(5, dtype=int)
+    
+    # Count values in each range
+    for i in range(5):
+        range_counts[i] = np.sum((pitch_values >= boundaries[i]) & 
+                                (pitch_values < boundaries[i + 1]))
+    
+    return range_counts, labels
+
 def add_pich_to_transcript(video_file_path, transcript, interpolation_degree=3):
     """
     Analyze pitch features from a video and add them to a transcript dictionary,
@@ -143,6 +182,22 @@ def add_pich_to_transcript(video_file_path, transcript, interpolation_degree=3):
             f0,
             time_pairs
         ).tolist()
+
+    range_counts, labels = analyze_pitch_ranges(f0)
+    transcript["pitch"]["range_counts"] = range_counts.tolist()
+    transcript["pitch"]["range_labels"] = labels
+
+    gemini_evaluation_of_pitch = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=f"""
+            From these labels and ranges, Please classify the speakers pitch. Be clear and concise, refer to the speaker as 'you'.
+            {labels}
+            {range_counts}
+        """,
+    ).text
+
+    transcript["pitch"]["evaluation"] = gemini_evaluation_of_pitch
+    
     return transcript
 
 

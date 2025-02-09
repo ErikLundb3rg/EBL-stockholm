@@ -26,8 +26,8 @@ def llm_summary(transcription):
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=f"""
-            In max 50 words, summarize what was great in the speech. Be clear and concise.
-            Then using a separator of {separator_key} do the same thing but for what could be improved.
+            In a bullet list, summarize what was great in the speech. Be clear and concise.
+            Then using a separator of {separator_key} do all of these things but rather for what can be improved.
             Refer too the speaker as 'you', also don't hallucinate. 
             {full_speech_text}
         """,
@@ -57,7 +57,7 @@ def segment(start, end, value):
         "value": value
     }
 
-def get_wpm_array(data, window_size=5):
+def get_wpm_array(data, window_size=10):
     # Create array for word counts
     duration = stripped_length(data)
     start_offset = data['transcription']['utterances'][0]['start']
@@ -102,8 +102,6 @@ def text_data(transcription = None):
         letterCount += len(filter_letters(sentence['sentence']))
     
     average_wpm = sum([x['value'] for x in get_wpm_array(transcription)]) / len(get_wpm_array(transcription))
-    
-
 
     dataObject = {
         "sentences": sentenceSegments,
@@ -113,7 +111,8 @@ def text_data(transcription = None):
         "wordsPerMinute": get_wpm_array(transcription),
         "summary": llm_summary(transcription),
         "averageWPM": average_wpm,
-        "averagePause": sum([x['value'] for x in pauseLengths]) / len(pauseLengths)
+        "averagePause": sum([x['value'] for x in pauseLengths]) / len(pauseLengths),
+        "entireSpeech": transcription['transcription']['full_transcript'],
     }
     return dataObject
 
