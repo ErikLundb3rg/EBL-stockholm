@@ -3,11 +3,42 @@ from google import genai
 import json
 from collections import defaultdict
 from dotenv import load_dotenv
+from collections import Counter
 import os
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+
+STOP_WORDS = set([
+    # Articles
+    "a", "an", "the",
+    
+    # Pronouns
+    "i", "me", "my", "mine", "you", "your", "yours", "he", "him", "his",
+    "she", "her", "hers", "it", "its", "we", "us", "our", "ours", "they",
+    "them", "their", "theirs",
+    
+    # Prepositions
+    "in", "on", "at", "to", "for", "with", "by", "about", "into", "of",
+    "from", "up", "down", "over", "under",
+    
+    # Conjunctions
+    "and", "but", "or", "nor", "yet", "so", "because", "although",
+    
+    # Be verbs
+    "am", "is", "are", "was", "were", "be", "been", "being",
+    
+    # Common verbs
+    "do", "does", "did", "have", "has", "had", "can", "could", "will",
+    "would", "shall", "should", "may", "might", "must",
+    
+    # Filler words
+    "um", "uh", "like", "well", "basically", "literally", "actually",
+    "honestly", "anyway", "right", "just", "stuff", "things", "whatever",
+    "yeah", "okay", "sort", "kind", "you know"
+])
 
 
 def read_json_file(filepath):
@@ -26,7 +57,7 @@ def llm_summary(transcription):
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=f"""
-            In a bullet list, summarize what was great in the speech. Be clear and concise.
+            Insummarize what was great in the speech. Be clear and concise, don't use markdown.
             Then using a separator of {separator_key} do all of these things but rather for what can be improved.
             Refer too the speaker as 'you', also don't hallucinate. 
             {full_speech_text}
@@ -39,6 +70,20 @@ def llm_summary(transcription):
         "good": good,
         "bad": bad
     }
+
+def llm_vocabulary_analyze(counter):
+    print("Asking Gemini about vocabulary")
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=f"""
+            Analyze the vocabulary of the speaker. What are the most common words used?
+            What parts of their vocabulary could be improved? What are they doing well?
+            Be clear and concise. Don't use markdown. Refer to the speaker as 'you'
+            Here is the frequency of words in the speech:
+            {counter.most_common(100)}
+        """,
+    )
+    return response.text
     
     
 def filter_letters(text):
@@ -102,6 +147,9 @@ def text_data(transcription = None):
         letterCount += len(filter_letters(sentence['sentence']))
     
     average_wpm = sum([x['value'] for x in get_wpm_array(transcription)]) / len(get_wpm_array(transcription))
+    full_transcript = transcription['transcription']['full_transcript']
+    word_frequency = Counter([word for word in full_transcript.split() if word.lower() not in STOP_WORDS])
+    print(word_frequency.most_common(10))
 
     dataObject = {
         "sentences": sentenceSegments,
@@ -112,7 +160,9 @@ def text_data(transcription = None):
         "summary": llm_summary(transcription),
         "averageWPM": average_wpm,
         "averagePause": sum([x['value'] for x in pauseLengths]) / len(pauseLengths),
-        "entireSpeech": transcription['transcription']['full_transcript'],
+        "entireSpeech": full_transcript,
+        "wordFrequency": word_frequency,
+        "vocabularyAnalysis": llm_vocabulary_analyze(word_frequency),
     }
     return dataObject
 
