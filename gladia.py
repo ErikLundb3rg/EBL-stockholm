@@ -78,5 +78,6 @@ def transcribe(video_file_path, timeout=1000):
             else:
                 # Transcription status
                 _current_status = poll_response.get("status")
+                print(_current_status)
             sleep(1)
     return {"error": "Transcription timed out"}

@@ -69,6 +69,11 @@ def upload_video():
             return transcribed_text, transcribed_text["error_code"]
     
         transcribed_text = add_pich_to_transcript(filepath, transcript=transcribed_text)
+
+        if int(os.getenv("TIME_SAVE", 0)) < 2:
+            print("adds movment")
+            transcribed_text["movement"] = movement(filepath, f"tracking_overlay/{filename}.mp4")
+
         # save transcript as json in uploads folder
         with open(f"uploads/{filename}.json", "w") as f:
             f.write(json.dumps(transcribed_text, indent=4))
@@ -76,11 +81,6 @@ def upload_video():
         with open(f"uploads/{filename}.json", "r") as f:
             transcribed_text = json.load(f)
 
-
-
-    if int(os.getenv("TIME_SAVE", 0)) < 2:
-        print("adds movment")
-        transcribed_text["movement"] = movement(filepath)#f"tracking_overlay/{filename}.mp4"
 
     return replace_nan_with_none({
             'message': 'Video uploaded successfully',
