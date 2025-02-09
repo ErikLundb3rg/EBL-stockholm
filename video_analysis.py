@@ -22,58 +22,18 @@ def draw_landmarks_on_image(rgb_image, detection_result):
         # Draw the pose landmarks.
         pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
         pose_landmarks_proto.landmark.extend([
-        landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
+            landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
         ])
         solutions.drawing_utils.draw_landmarks(
-        annotated_image,
-        pose_landmarks_proto,
-        solutions.pose.POSE_CONNECTIONS,
-        solutions.drawing_styles.get_default_pose_landmarks_style())
+            annotated_image,
+            pose_landmarks_proto,
+            solutions.pose.POSE_CONNECTIONS,
+            solutions.drawing_styles.get_default_pose_landmarks_style())
     return annotated_image
 
-# mp_drawing = mp.solutions.drawing_utils
-# mp_pose = mp.solutions.pose
-# mp_drawing_styles = mp.solutions.drawing_styles
-
-# def draw_landmarks_on_image(rgb_image, detection_result):
-#     """
-#     Draws detected pose landmarks on an RGB image.
-    
-#     Args:
-#         rgb_image (numpy.ndarray): The input image in RGB format.
-#         detection_result (PoseLandmarkerResult): The result containing pose landmarks.
-    
-#     Returns:
-#         numpy.ndarray: The image with landmarks overlaid.
-#     """
-#     pose_landmarks_list = detection_result.pose_landmarks
-#     annotated_image = np.copy(rgb_image)
-
-#     if not pose_landmarks_list:
-#         return annotated_image  # Return the original image if no landmarks found
-
-#     # Loop through detected poses
-#     for pose_landmarks in pose_landmarks_list:
-#         # Convert pose landmarks to a MediaPipe landmark list
-#         pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-#         pose_landmarks_proto.landmark.extend([
-#             landmark_pb2.NormalizedLandmark(x=lm.x, y=lm.y, z=lm.z) for lm in pose_landmarks
-#         ])
-
-#         # Draw the pose landmarks
-#         mp_drawing.draw_landmarks(
-#             annotated_image,
-#             pose_landmarks_proto,
-#             mp_pose.POSE_CONNECTIONS,
-#             mp_drawing_styles.get_default_pose_landmarks_style()
-#         )
-
-#     return annotated_image
-
-
-def get_poses(video_file_path, show=False):
+def get_poses(video_file_path, show=False, output_file_path="output.mp4"):
     model_path = os.getenv("VISION_MODEL", "pose_landmarker.task")
-    output_file_path = "overlayed_video.mp4"
+    
     # Load an mp4 file instead of capturing from the webcam
     base_options = mp.tasks.BaseOptions
     pose_landmarker = mp.tasks.vision.PoseLandmarker
@@ -86,20 +46,28 @@ def get_poses(video_file_path, show=False):
     
     cap = cv2.VideoCapture(video_file_path)
 
-    frame_width = int(cap.get(3))  # Width
-    frame_height = int(cap.get(4))  # Height
-    fps = int(cap.get(cv2.CAP_PROP_FPS))  # Frames per second
+    # Get the original video properties
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))   # Fixed property name
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # Fixed property name
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
 
     if fps <= 0:
         fps = 30  # Set a default FPS if reading fails
 
     # Define video writer to save output
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec
-    out = cv2.VideoWriter(output_file_path, fourcc, fps, (frame_width, frame_height))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(
+        output_file_path, 
+        fourcc, 
+        fps, 
+        (frame_width, frame_height)  # Fixed order: width then height
+    )
+    
+    if not out.isOpened():
+        raise RuntimeError("Failed to open output video file")
 
     pose_results = []
     with pose_landmarker.create_from_options(options) as landmarker:
-        
         frame_idx = 0
         while True:
             ret, frame = cap.read() 
@@ -109,17 +77,18 @@ def get_poses(video_file_path, show=False):
             if frame is None:
                 continue
 
-            # Convert the frame to a numpy array
-            numpy_frame_from_opencv = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)#np.array(frame)
-
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=numpy_frame_from_opencv)
+            # Convert BGR to RGB for MediaPipe
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
             pose_landmarker_result = landmarker.detect_for_video(mp_image, frame_idx)
-
             pose_results.append(pose_landmarker_result)
 
             if pose_landmarker_result.pose_landmarks:
-                drawn_image = draw_landmarks_on_image(frame, pose_landmarker_result)
+                # Draw on RGB frame
+                drawn_image = draw_landmarks_on_image(rgb_frame, pose_landmarker_result)
+                # Convert back to BGR for OpenCV
+                drawn_image = cv2.cvtColor(drawn_image, cv2.COLOR_RGB2BGR)
             else:
                 drawn_image = frame  # No landmarks detected, keep original frame
 
@@ -135,8 +104,9 @@ def get_poses(video_file_path, show=False):
             frame_idx += 1
 
     cap.release()
-    out.release()  # Save the video
-    cv2.destroyAllWindows()
+    out.release()
+    if show:
+        cv2.destroyAllWindows()
     return pose_results
 
 def x_y_from_poses(pose_results) -> list[list[tuple]]: 
@@ -186,8 +156,8 @@ def score_handmovement(pose_results, normalize=True):
         movement.append(m)
     return movement, dist_camera, camera_cuts
 
-def movement(video_file_path):
-    poses = get_poses(video_file_path, show=False)
+def movement(video_file_path, output_file_path="output.mp4"):
+    poses = get_poses(video_file_path, show=False, output_file_path=output_file_path)
     scores, _dist_camera, _cuts = score_handmovement(poses, normalize=False)
     return {
         "movementScores": scores

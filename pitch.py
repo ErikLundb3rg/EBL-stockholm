@@ -79,7 +79,7 @@ def pich(video_file_path):
 
     # 2. Extract pitch (fundamental frequency) using pyin (a better pitch estimator)
     print("pitch")
-    if os.getenv("TIME_SAVE", 0) == 0:
+    if int(os.getenv("TIME_SAVE", 0)) == 0:
         f0, _voiced_flag, _voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C1'), fmax=librosa.note_to_hz('C8'), sr=sr)
     else:
         f0 = np.full_like(rms[0], 100)

@@ -80,7 +80,7 @@ def upload_video():
 
     if int(os.getenv("TIME_SAVE", 0)) < 2:
         print("adds movment")
-        transcribed_text["movement"] = movement(filepath)
+        transcribed_text["movement"] = movement(filepath)#f"tracking_overlay/{filename}.mp4"
 
     return replace_nan_with_none({
             'message': 'Video uploaded successfully',
