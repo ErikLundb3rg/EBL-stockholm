@@ -57,7 +57,7 @@ def segment(start, end, value):
         "value": value
     }
 
-def get_wpm_array(data, window_size=10):
+def get_wpm_array(data, window_size=5):
     # Create array for word counts
     duration = stripped_length(data)
     start_offset = data['transcription']['utterances'][0]['start']
@@ -76,11 +76,14 @@ def get_wpm_array(data, window_size=10):
                 when[window_idx][1] = word['end']
                 word_counts[window_idx] += length
     
-    # Convert to WPM (multiply by 6 since windows are 10 seconds)
-    wpms = [int(count * 6) for count in word_counts]
+    # Convert to WPM 
+    divisor = [60 / (when[i][1] - when[i][0]) for i in range(num_windows)]
+    wpms = [int(count * divisor[i]) for i, count in enumerate(word_counts)]
     return [segment(when[i][0], when[i][1], wpms[i]) for i in range(num_windows)]
 
-def text_data(transcription):
+def text_data(transcription = None):
+    if not transcription:
+        transcription = read_json_file("./transcribed.json")
     sentences = transcription['transcription']['sentences']
     sentenceSegments = []
     pauseLengths = []
