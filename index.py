@@ -6,6 +6,7 @@ from gladia import transcribe
 import text_data as td
 from pitch import add_pich_to_transcript
 from utils import replace_nan_with_none
+import json
 
 app = Flask(__name__)
 # Enable CORS for all routes
@@ -51,23 +52,30 @@ def upload_video():
     # Check if the file is allowed
     if not allowed_file(file.filename):
         return {'error': 'File type not allowed'}, 400
-    
     try:
         # Secure the filename and save the file
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        
-        
     except Exception as e:
         return {'error': str(e)}, 500
     
-    transcribed_text = transcribe(filepath)
-    if "error" in transcribed_text:
-        return transcribed_text, transcribed_text["error_code"]
+    # check if we already transcribed the video
+    if not os.path.exists(f"uploads/{filename}.json"):
+        transcribed_text = transcribe(filepath)
+        if "error" in transcribed_text:
+            return transcribed_text, transcribed_text["error_code"]
     
-    transcribed_text = add_pich_to_transcript(filepath, transcript=transcribed_text)
+        transcribed_text = add_pich_to_transcript(filepath, transcript=transcribed_text)
+        # save transcript as json in uploads folder
+        with open(f"uploads/{filename}.json", "w") as f:
+            f.write(json.dumps(transcribed_text, indent=4))
+    else: 
+        with open(f"uploads/{filename}.json", "r") as f:
+            transcribed_text = json.load(f)
+
+
 
     return replace_nan_with_none({
             'message': 'Video uploaded successfully',
