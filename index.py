@@ -6,6 +6,7 @@ from gladia import transcribe
 import text_data as td
 from pitch import add_pich_to_transcript
 from utils import replace_nan_with_none
+from video_analysis import movement
 import json
 
 app = Flask(__name__)
@@ -77,11 +78,16 @@ def upload_video():
 
 
 
+    if int(os.getenv("TIME_SAVE", 0)) < 2:
+        print("adds movment")
+        transcribed_text["movement"] = movement(filepath)
+
     return replace_nan_with_none({
             'message': 'Video uploaded successfully',
             'filename': filename,
             'textData': td.text_data(transcribed_text),
-            'pitch': transcribed_text.get("pitch")
+            'pitch': transcribed_text.get("pitch"),
+            "movement": transcribed_text.get("movement"),
         }), 200
 
 if __name__ == '__main__':
