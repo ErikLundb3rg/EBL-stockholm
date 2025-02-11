@@ -4,7 +4,7 @@ import json
 import sys
 print(sys.path)  # This will show us where Python is looking for modules
 from moviepy import *
-from moviepy.editor import VideoFileClip
+from moviepy.video.io.VideoFileClip import VideoFileClip
 from numpy.polynomial import Polynomial
 import os
 from text_data import client

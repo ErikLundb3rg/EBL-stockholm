@@ -1,0 +1,8 @@
+flask
+flask-cors
+google-genai
+python-dotenv
+numpy
+requests
+librosa
+moviepy
